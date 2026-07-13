@@ -1,0 +1,37 @@
+[
+  {
+    "candidateName": "Ayesha Khan",
+    "candidateEmail": "ayesha.khan@example.com",
+    "responses": {
+      "Expected Salary (PKR)": 220000,
+      "Portfolio URL": "https://portfolio.example.com/ayesha",
+      "Notice Period": "30 days"
+    },
+    "cvUrl": "https://example.com/cv-ayesha.pdf",
+    "status": "Pending",
+    "jobTitleHint": "[TEST] Frontend Engineer (React)"
+  },
+  {
+    "candidateName": "Bilal Ahmed",
+    "candidateEmail": "bilal.ahmed@example.com",
+    "responses": {
+      "Current CTC": 260000,
+      "GitHub Profile": "https://github.com/bilalahmed",
+      "Preferred Shift": "Flexible"
+    },
+    "cvUrl": "https://example.com/cv-bilal.pdf",
+    "status": "Accepted",
+    "jobTitleHint": "[TEST] Backend Engineer (Node.js)"
+  },
+  {
+    "candidateName": "Sara Ali",
+    "candidateEmail": "sara.ali@example.com",
+    "responses": {
+      "Behance/Dribbble URL": "https://dribbble.com/sara",
+      "Design Tool Expertise": "Figma"
+    },
+    "cvUrl": "https://example.com/cv-sara.pdf",
+    "status": "Rejected",
+    "jobTitleHint": "[TEST] UI/UX Designer"
+  }
+]

@@ -1,0 +1,52 @@
+[
+  {
+    "title": "[TEST] Frontend Engineer (React)",
+    "location": "Peshawar",
+    "type": "Full-time",
+    "description": "<p>Build modern interfaces with reusable components and polished UX execution.</p>",
+    "isActive": true,
+    "formSchema": [
+      { "label": "Expected Salary (PKR)", "fieldType": "number", "required": true },
+      { "label": "Portfolio URL", "fieldType": "text", "required": false },
+      {
+        "label": "Notice Period",
+        "fieldType": "dropdown",
+        "required": true,
+        "options": ["Immediate", "15 days", "30 days"]
+      }
+    ]
+  },
+  {
+    "title": "[TEST] Backend Engineer (Node.js)",
+    "location": "Remote",
+    "type": "Full-time",
+    "description": "<p>Design APIs and build resilient backend services with clean architecture.</p>",
+    "isActive": true,
+    "formSchema": [
+      { "label": "Current CTC", "fieldType": "number", "required": true },
+      { "label": "GitHub Profile", "fieldType": "text", "required": false },
+      {
+        "label": "Preferred Shift",
+        "fieldType": "dropdown",
+        "required": true,
+        "options": ["Day", "Evening", "Flexible"]
+      }
+    ]
+  },
+  {
+    "title": "[TEST] UI/UX Designer",
+    "location": "Islamabad",
+    "type": "Hybrid",
+    "description": "<p>Create high quality product experiences with strong UX research and visual systems.</p>",
+    "isActive": true,
+    "formSchema": [
+      { "label": "Behance/Dribbble URL", "fieldType": "text", "required": true },
+      {
+        "label": "Design Tool Expertise",
+        "fieldType": "dropdown",
+        "required": true,
+        "options": ["Figma", "Adobe XD", "Sketch"]
+      }
+    ]
+  }
+]
