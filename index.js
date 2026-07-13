@@ -75,13 +75,21 @@ app.use((err, _req, res, _next) => {
 
 const startServer = async () => {
   validateEnv();
-  await connectDatabase();
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+  try {
+    await connectDatabase();
+    if (!process.env.VERCEL) {
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+    }
+  } catch (error) {
+    console.error("Server startup failed:", error.message);
+    if (!process.env.VERCEL) {
+      process.exit(1);
+    }
+  }
 };
 
-startServer().catch((error) => {
-  console.error("Server startup failed:", error.message);
-  process.exit(1);
-});
+startServer();
+
+export default app;
