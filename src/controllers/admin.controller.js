@@ -4,8 +4,6 @@ import Job from "../models/job.model.js";
 import { sendMail } from "../config/mailer.js";
 import { createAdminToken } from "../utils/adminToken.js";
 import { escapeHtml, escapeRegex } from "../utils/sanitize.js";
-import { sendMail } from "../config/mailer.js";
-import { createAdminToken } from "../utils/adminToken.js";
 
 const safeCompare = (a, b) => {
   const bufA = Buffer.from(a);

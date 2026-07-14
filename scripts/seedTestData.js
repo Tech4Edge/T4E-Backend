@@ -60,12 +60,36 @@ const sampleJobs = [
       },
     ],
   },
+  {
+    title: "[TEST] MERN Stack Developer",
+    location: "Lahore",
+    type: "Hybrid",
+    description:
+      "<p>End-to-end web application development using MongoDB, Express, React, and Node.js.</p>",
+    isActive: true,
+    formSchema: [
+      { label: "Years of MERN Experience", fieldType: "number", required: true },
+      { label: "LinkedIn Profile", fieldType: "text", required: true },
+    ],
+  },
+  {
+    title: "[TEST] Digital Marketing Specialist",
+    location: "Peshawar",
+    type: "Part-time",
+    description:
+      "<p>Manage ad campaigns, SEO, and social media presence.</p>",
+    isActive: false,
+    formSchema: [
+      { label: "Previous Campaign Spend Managed", fieldType: "number", required: false },
+    ],
+  },
 ];
 
 const buildApplications = (jobs) => {
   const frontendJob = jobs.find((job) => job.title.includes("Frontend Engineer"));
   const backendJob = jobs.find((job) => job.title.includes("Backend Engineer"));
   const designerJob = jobs.find((job) => job.title.includes("UI/UX Designer"));
+  const mernJob = jobs.find((job) => job.title.includes("MERN Stack"));
 
   return [
     {
@@ -79,6 +103,18 @@ const buildApplications = (jobs) => {
       },
       cvUrl: "https://example.com/cv-ayesha.pdf",
       status: "Pending",
+    },
+    {
+      jobId: frontendJob?._id,
+      candidateName: "Usman Tariq",
+      candidateEmail: "usman.t@example.com",
+      responses: {
+        "Expected Salary (PKR)": 250000,
+        "Portfolio URL": "https://usmantariq.dev",
+        "Notice Period": "Immediate",
+      },
+      cvUrl: "https://example.com/cv-usman.pdf",
+      status: "Shortlisted",
     },
     {
       jobId: backendJob?._id,
@@ -102,6 +138,28 @@ const buildApplications = (jobs) => {
       },
       cvUrl: "https://example.com/cv-sara.pdf",
       status: "Rejected",
+    },
+    {
+      jobId: mernJob?._id,
+      candidateName: "Ali Raza",
+      candidateEmail: "ali.raza@example.com",
+      responses: {
+        "Years of MERN Experience": 3,
+        "LinkedIn Profile": "https://linkedin.com/in/aliraza",
+      },
+      cvUrl: "https://example.com/cv-ali.pdf",
+      status: "Reviewed",
+    },
+    {
+      jobId: mernJob?._id,
+      candidateName: "Hina Rabbani",
+      candidateEmail: "hina.r@example.com",
+      responses: {
+        "Years of MERN Experience": 5,
+        "LinkedIn Profile": "https://linkedin.com/in/hina-r",
+      },
+      cvUrl: "https://example.com/cv-hina.pdf",
+      status: "Pending",
     },
   ].filter((application) => Boolean(application.jobId));
 };
