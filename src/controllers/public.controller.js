@@ -108,16 +108,20 @@ export const applyToJob = async (req, res) => {
       cvUrl: cloudinaryResult.secure_url,
     });
 
-    await sendMail({
-      to: safeCandidateEmail,
-      subject: `Application Received - ${job.title}`,
-      html: `
-        <p>Hi ${safeCandidateName},</p>
-        <p>We have received your application for <strong>${job.title}</strong>.</p>
-        <p>Our hiring team will review your profile and update you soon.</p>
-        <p>Thanks,<br />Tech4Edges</p>
-      `,
-    });
+    try {
+      await sendMail({
+        to: safeCandidateEmail,
+        subject: `Application Received - ${job.title}`,
+        html: `
+          <p>Hi ${safeCandidateName},</p>
+          <p>We have received your application for <strong>${job.title}</strong>.</p>
+          <p>Our hiring team will review your profile and update you soon.</p>
+          <p>Thanks,<br />Tech4Edges</p>
+        `,
+      });
+    } catch (mailError) {
+      console.error("Non-critical error: Failed to send confirmation email", mailError);
+    }
 
     return res.status(201).json({
       message: "Application submitted successfully",
