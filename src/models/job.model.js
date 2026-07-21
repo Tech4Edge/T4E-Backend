@@ -21,8 +21,10 @@ const jobSchema = new mongoose.Schema({
   title: { type: String, required: true, maxlength: 200 },
   location: { type: String, enum: OFFICE_LOCATIONS },
   type: { type: String, enum: JOB_TYPES },
+  department: { type: String, maxlength: 100 },
   description: { type: String, maxlength: 50000 },
   isActive: { type: Boolean, default: true },
+  closingDate: { type: Date, index: true },
   postedDate: { type: Date, default: Date.now },
   formSchema: [formFieldSchema],
 });

@@ -7,7 +7,10 @@ import { escapeHtml, escapeRegex, isValidEmail } from "../utils/sanitize.js";
 export const getJobs = async (req, res) => {
   const { type, location, search } = req.query;
 
-  const filter = { isActive: true };
+  const filter = { 
+    isActive: true, 
+    $or: [{ closingDate: null }, { closingDate: { $gt: new Date() } }] 
+  };
 
   if (type) {
     filter.type = type;

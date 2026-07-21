@@ -12,6 +12,16 @@ const safeCompare = (a, b) => {
   return crypto.timingSafeEqual(bufA, bufB);
 };
 
+const getDateRangeFilter = (rangeStr) => {
+  if (!rangeStr || rangeStr === "all") return {};
+  const now = new Date();
+  if (rangeStr === "7d") return { $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) };
+  if (rangeStr === "30d") return { $gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) };
+  if (rangeStr === "90d") return { $gte: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000) };
+  if (rangeStr === "ytd") return { $gte: new Date(now.getFullYear(), 0, 1) };
+  return {};
+};
+
 export const loginAdmin = async (req, res) => {
   const { username, password } = req.body;
   const configuredUsername = process.env.ADMIN_USERNAME;
@@ -155,10 +165,115 @@ export const getApplications = async (req, res) => {
   return res.json({ applications, total, page, pages: Math.ceil(total / limit) });
 };
 
+export const getAnalytics = async (req, res) => {
+  const { range } = req.query;
+  const dateFilter = getDateRangeFilter(range);
+
+  // Hires this month
+  const hiresFilter = { status: "Hired" };
+  if (Object.keys(dateFilter).length > 0) {
+    hiresFilter.hiredAt = dateFilter;
+  }
+  const hiresCount = await Application.countDocuments(hiresFilter);
+  const recentHires = await Application.find(hiresFilter)
+    .populate("jobId", "title")
+    .sort({ hiredAt: -1 })
+    .limit(5);
+
+  // New applications (24h)
+  const newAppsFilter = { 
+    appliedAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } 
+  };
+  const newApplications24h = await Application.countDocuments(newAppsFilter);
+
+  // Open positions
+  const openPositions = await Job.countDocuments({ 
+    isActive: true, 
+    $or: [{ closingDate: null }, { closingDate: { $gt: new Date() } }] 
+  });
+
+  // Time-to-Hire
+  const hiredApps = await Application.find({ status: "Hired", hiredAt: { $exists: true }, appliedAt: { $exists: true } });
+  let totalDays = 0;
+  for (const app of hiredApps) {
+    totalDays += (new Date(app.hiredAt) - new Date(app.appliedAt)) / (1000 * 60 * 60 * 24);
+  }
+  const avgTimeToHire = hiredApps.length > 0 ? Math.round(totalDays / hiredApps.length) : 0;
+
+  // Pipeline Status
+  const statusCounts = await Application.aggregate([
+    { $match: Object.keys(dateFilter).length > 0 ? { appliedAt: dateFilter } : {} },
+    { $group: { _id: "$status", count: { $sum: 1 } } }
+  ]);
+  const totalAppsForRange = statusCounts.reduce((acc, curr) => acc + curr.count, 0);
+  const pipelineBreakdown = statusCounts.map(s => ({
+    status: s._id,
+    count: s.count,
+    percentage: totalAppsForRange > 0 ? Math.round((s.count / totalAppsForRange) * 100) : 0
+  }));
+
+  // Top 10 New Applications
+  const topAppsFilter = Object.keys(dateFilter).length > 0 ? { appliedAt: dateFilter } : {};
+  const topNewApplications = await Application.find(topAppsFilter)
+    .populate("jobId", "title")
+    .sort({ appliedAt: -1 })
+    .limit(10);
+
+  return res.json({
+    hiresThisMonth: hiresCount,
+    recentHires,
+    newApplications24h,
+    openPositions,
+    avgTimeToHire,
+    pipelineBreakdown,
+    topNewApplications
+  });
+};
+
+export const exportApplicationsCsv = async (req, res) => {
+  const { status, jobId, search } = req.query;
+  const filter = {};
+
+  if (status) filter.status = status;
+  if (jobId) filter.jobId = jobId;
+  if (search) {
+    const safeSearch = escapeRegex(search);
+    filter.$or = [
+      { candidateName: { $regex: safeSearch, $options: "i" } },
+      { candidateEmail: { $regex: safeSearch, $options: "i" } },
+    ];
+  }
+
+  const applications = await Application.find(filter)
+    .populate("jobId", "title")
+    .sort({ appliedAt: -1 });
+
+  let csvContent = "Candidate Name,Candidate Email,Job Role,Applied At,Status\n";
+  for (const app of applications) {
+    const role = app.jobId ? app.jobId.title.replace(/,/g, "") : "N/A";
+    const date = new Date(app.appliedAt).toISOString().split('T')[0];
+    csvContent += `"${app.candidateName}","${app.candidateEmail}","${role}","${date}","${app.status}"\n`;
+  }
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename=applications.csv');
+  return res.status(200).send(csvContent);
+};
+
+export const bulkDeleteApplications = async (req, res) => {
+  const { ids } = req.body;
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ message: "No application IDs provided" });
+  }
+
+  await Application.deleteMany({ _id: { $in: ids } });
+  return res.json({ message: `Successfully deleted ${ids.length} applications` });
+};
+
 export const updateApplicationStatus = async (req, res) => {
   const { status } = req.body;
 
-  const terminalStatuses = ["Accepted", "Rejected"];
+  const terminalStatuses = ["Interview", "Hired", "Rejected"];
   
   if (!APPLICATION_STATUSES.includes(status)) {
     return res.status(400).json({ message: "Invalid status value" });
@@ -170,21 +285,43 @@ export const updateApplicationStatus = async (req, res) => {
   }
 
   application.status = status;
+  if (status === "Hired") {
+    application.hiredAt = new Date();
+  }
   await application.save();
 
   if (terminalStatuses.includes(status)) {
     const safeCandidateName = escapeHtml(application.candidateName);
     const safeJobTitle = escapeHtml(application.jobId?.title || "Tech4Edges Role");
+    
+    let emailHtml = "";
+    if (status === "Rejected") {
+      emailHtml = `
+        <p>Hi ${safeCandidateName},</p>
+        <p>Thank you for applying for the <strong>${safeJobTitle}</strong> position.</p>
+        <p>Unfortunately, we have decided to move forward with other candidates at this time. We will keep your resume on file for future opportunities.</p>
+        <p>Best wishes,<br />Tech4Edges Recruitment Team</p>
+      `;
+    } else if (status === "Interview") {
+      emailHtml = `
+        <p>Hi ${safeCandidateName},</p>
+        <p>Thank you for applying for the <strong>${safeJobTitle}</strong> position. We would like to invite you to an interview.</p>
+        <p>Our team will be in touch shortly to schedule a time.</p>
+        <p>Thanks,<br />Tech4Edges Recruitment Team</p>
+      `;
+    } else if (status === "Hired") {
+      emailHtml = `
+        <p>Hi ${safeCandidateName},</p>
+        <p>Congratulations! We are thrilled to offer you the <strong>${safeJobTitle}</strong> position.</p>
+        <p>Our HR team will reach out shortly with the formal offer details.</p>
+        <p>Welcome to Tech4Edges,<br />Tech4Edges Recruitment Team</p>
+      `;
+    }
 
     await sendMail({
       to: application.candidateEmail,
-      subject: `Application ${status} - ${safeJobTitle}`,
-      html: `
-        <p>Hi ${safeCandidateName},</p>
-        <p>Your application status has been updated to <strong>${status}</strong>.</p>
-        <p>Role: ${safeJobTitle}</p>
-        <p>Thanks,<br />Tech4Edges Recruitment Team</p>
-      `,
+      subject: `Application Update - ${safeJobTitle}`,
+      html: emailHtml,
     });
   }
 

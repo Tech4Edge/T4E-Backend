@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const APPLICATION_STATUSES = ["Pending", "Reviewed", "Shortlisted", "Accepted", "Rejected"];
+const APPLICATION_STATUSES = ["New", "Under Review", "Interview", "Offer", "Hired", "Rejected"];
 
 const applicationSchema = new mongoose.Schema({
   jobId: { type: mongoose.Schema.Types.ObjectId, ref: "Job", required: true },
@@ -11,9 +11,10 @@ const applicationSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: APPLICATION_STATUSES,
-    default: "Pending",
+    default: "New",
   },
   appliedAt: { type: Date, default: Date.now },
+  hiredAt: { type: Date },
 });
 
 applicationSchema.index({ jobId: 1, candidateEmail: 1 }, { unique: true });

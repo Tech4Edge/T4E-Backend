@@ -102,7 +102,7 @@ const buildApplications = (jobs) => {
         "Notice Period": "30 days",
       },
       cvUrl: "https://example.com/cv-ayesha.pdf",
-      status: "Pending",
+      status: "New",
     },
     {
       jobId: frontendJob?._id,
@@ -114,7 +114,7 @@ const buildApplications = (jobs) => {
         "Notice Period": "Immediate",
       },
       cvUrl: "https://example.com/cv-usman.pdf",
-      status: "Shortlisted",
+      status: "Under Review",
     },
     {
       jobId: backendJob?._id,
@@ -126,7 +126,8 @@ const buildApplications = (jobs) => {
         "Preferred Shift": "Flexible",
       },
       cvUrl: "https://example.com/cv-bilal.pdf",
-      status: "Accepted",
+      status: "Hired",
+      hiredAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
     },
     {
       jobId: designerJob?._id,
@@ -148,7 +149,7 @@ const buildApplications = (jobs) => {
         "LinkedIn Profile": "https://linkedin.com/in/aliraza",
       },
       cvUrl: "https://example.com/cv-ali.pdf",
-      status: "Reviewed",
+      status: "Under Review",
     },
     {
       jobId: mernJob?._id,
@@ -159,7 +160,7 @@ const buildApplications = (jobs) => {
         "LinkedIn Profile": "https://linkedin.com/in/hina-r",
       },
       cvUrl: "https://example.com/cv-hina.pdf",
-      status: "Pending",
+      status: "New",
     },
   ].filter((application) => Boolean(application.jobId));
 };
