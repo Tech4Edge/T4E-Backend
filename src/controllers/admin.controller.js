@@ -205,11 +205,25 @@ export const getAnalytics = async (req, res) => {
     { $match: Object.keys(dateFilter).length > 0 ? { appliedAt: dateFilter } : {} },
     { $group: { _id: "$status", count: { $sum: 1 } } }
   ]);
-  const totalAppsForRange = statusCounts.reduce((acc, curr) => acc + curr.count, 0);
-  const pipelineBreakdown = statusCounts.map(s => ({
-    status: s._id,
-    count: s.count,
-    percentage: totalAppsForRange > 0 ? Math.round((s.count / totalAppsForRange) * 100) : 0
+  
+  const normalizedCounts = {};
+  statusCounts.forEach(s => {
+    let status = s._id;
+    if (status === "Pending") status = "New";
+    if (status === "Reviewing") status = "Under Review";
+    if (status === "Accepted") status = "Hired";
+    
+    if (!normalizedCounts[status]) {
+      normalizedCounts[status] = 0;
+    }
+    normalizedCounts[status] += s.count;
+  });
+
+  const totalAppsForRange = Object.values(normalizedCounts).reduce((a, b) => a + b, 0);
+  const pipelineBreakdown = Object.entries(normalizedCounts).map(([status, count]) => ({
+    status,
+    count,
+    percentage: totalAppsForRange > 0 ? Math.round((count / totalAppsForRange) * 100) : 0
   }));
 
   // Top 10 New Applications
@@ -230,6 +244,8 @@ export const getAnalytics = async (req, res) => {
   });
 };
 
+import xlsx from "xlsx";
+
 export const exportApplicationsCsv = async (req, res) => {
   const { status, jobId, search } = req.query;
   const filter = {};
@@ -248,16 +264,23 @@ export const exportApplicationsCsv = async (req, res) => {
     .populate("jobId", "title")
     .sort({ appliedAt: -1 });
 
-  let csvContent = "Candidate Name,Candidate Email,Job Role,Applied At,Status\n";
-  for (const app of applications) {
-    const role = app.jobId ? app.jobId.title.replace(/,/g, "") : "N/A";
-    const date = new Date(app.appliedAt).toISOString().split('T')[0];
-    csvContent += `"${app.candidateName}","${app.candidateEmail}","${role}","${date}","${app.status}"\n`;
-  }
+  const data = applications.map((app) => ({
+    "Candidate Name": app.candidateName,
+    "Candidate Email": app.candidateEmail,
+    "Job Role": app.jobId ? app.jobId.title : "N/A",
+    "Applied At": new Date(app.appliedAt).toISOString().split('T')[0],
+    "Status": app.status
+  }));
 
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename=applications.csv');
-  return res.status(200).send(csvContent);
+  const worksheet = xlsx.utils.json_to_sheet(data);
+  const workbook = xlsx.utils.book_new();
+  xlsx.utils.book_append_sheet(workbook, worksheet, "Applications");
+  
+  const buffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', 'attachment; filename=applications.xlsx');
+  return res.status(200).send(buffer);
 };
 
 export const bulkDeleteApplications = async (req, res) => {

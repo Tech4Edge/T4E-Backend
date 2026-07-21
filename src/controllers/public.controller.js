@@ -1,5 +1,7 @@
 import Application from "../models/application.model.js";
 import Job from "../models/job.model.js";
+import Notification from "../models/notification.model.js";
+import pusher from "../config/pusher.js";
 import { sendMail } from "../config/mailer.js";
 import { uploadBufferToCloudinary } from "../utils/cloudinaryUpload.js";
 import { escapeHtml, escapeRegex, isValidEmail } from "../utils/sanitize.js";
@@ -110,6 +112,30 @@ export const applyToJob = async (req, res) => {
       responses: dynamicResponses,
       cvUrl: cloudinaryResult.secure_url,
     });
+    
+    // Create notification and push via Pusher
+    try {
+      const notification = await Notification.create({
+        type: "new_application",
+        title: "New Application",
+        message: `${safeCandidateName} applied for ${job.title}`,
+        meta: {
+          candidateName: safeCandidateName,
+          candidateEmail: safeCandidateEmail,
+          jobTitle: job.title,
+          applicationId: application._id
+        }
+      });
+      
+      pusher.trigger("admin-channel", "new_application", {
+        notificationId: notification._id,
+        candidateName: safeCandidateName,
+        jobTitle: job.title,
+        appliedAt: application.appliedAt || new Date()
+      });
+    } catch (notifErr) {
+      console.error("Non-critical error: Failed to create notification", notifErr);
+    }
 
     try {
       await sendMail({

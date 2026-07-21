@@ -33,4 +33,16 @@ router.post("/applications/bulk-delete", bulkDeleteApplications);
 router.get("/applications", getApplications);
 router.patch("/applications/:id/status", updateApplicationStatus);
 
+import {
+  getNotifications,
+  markAllRead,
+  deleteNotification,
+  deleteAllNotifications
+} from "../controllers/notification.controller.js";
+
+router.get("/notifications", getNotifications);
+router.patch("/notifications/read-all", markAllRead);
+router.delete("/notifications/:id", deleteNotification);
+router.delete("/notifications", deleteAllNotifications);
+
 export default router;
