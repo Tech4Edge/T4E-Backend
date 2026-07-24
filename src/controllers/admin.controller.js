@@ -43,7 +43,7 @@ export const loginAdmin = async (req, res) => {
   res.cookie("t4e_admin_token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     maxAge: ttlHours * 60 * 60 * 1000,
   });
 
@@ -54,7 +54,7 @@ export const logoutAdmin = (_req, res) => {
   res.clearCookie("t4e_admin_token", { 
     httpOnly: true, 
     secure: process.env.NODE_ENV === "production", 
-    sameSite: "strict" 
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax" 
   });
   return res.json({ message: "Logged out" });
 };
