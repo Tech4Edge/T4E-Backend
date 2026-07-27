@@ -130,14 +130,14 @@ export const applyToJob = async (req, res) => {
         }
       });
       
-      pusher.trigger("admin-channel", "new_application", {
+      await pusher.trigger("admin-channel", "new_application", {
         notificationId: notification._id,
         candidateName: safeCandidateName,
         jobTitle: job.title,
         appliedAt: application.appliedAt || new Date()
       });
     } catch (notifErr) {
-      console.error("Non-critical error: Failed to create notification", notifErr);
+      console.error("Non-critical error: Failed to create notification or push event", notifErr);
     }
 
     try {
