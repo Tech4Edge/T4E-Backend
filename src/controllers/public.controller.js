@@ -31,12 +31,23 @@ export const getJobs = async (req, res) => {
     });
   }
 
-  const jobs = await Job.find(filter).sort({ postedDate: -1 });
-  res.json(jobs);
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(100, parseInt(req.query.limit) || 50);
+  const skip = (page - 1) * limit;
+
+  const [jobs, total] = await Promise.all([
+    Job.find(filter).sort({ postedDate: -1 }).skip(skip).limit(limit),
+    Job.countDocuments(filter),
+  ]);
+  res.json({ jobs, total, page, pages: Math.ceil(total / limit) });
 };
 
 export const getJobById = async (req, res) => {
-  const job = await Job.findOne({ _id: req.params.id, isActive: true });
+  const job = await Job.findOne({
+    _id: req.params.id,
+    isActive: true,
+    $or: [{ closingDate: null }, { closingDate: { $gt: new Date() } }],
+  });
   if (!job) {
     return res.status(404).json({ message: "Job not found" });
   }

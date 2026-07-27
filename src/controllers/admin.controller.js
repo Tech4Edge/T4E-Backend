@@ -73,18 +73,19 @@ export const getJobsAdmin = async (_req, res) => {
 };
 
 export const createJob = async (req, res) => {
-  const { title, location, type, description, isActive, formSchema } = req.body;
+  const { title, location, type, description, isActive, formSchema, closingDate } = req.body;
 
   if (!title) {
     return res.status(400).json({ message: "Job title is required" });
   }
 
   const createdJob = await Job.create({
-    title,
+    title: escapeHtml(String(title).trim()).substring(0, 200),
     location,
     type,
-    description,
+    description: description ? escapeHtml(String(description).trim()).substring(0, 50000) : undefined,
     isActive: isActive ?? true,
+    closingDate: closingDate ? new Date(closingDate) : undefined,
     formSchema: Array.isArray(formSchema) ? formSchema : [],
   });
 
@@ -92,7 +93,7 @@ export const createJob = async (req, res) => {
 };
 
 export const updateJob = async (req, res) => {
-  const { title, location, type, description, isActive, formSchema } = req.body;
+  const { title, location, type, description, isActive, formSchema, closingDate } = req.body;
 
   if (!title) {
     return res.status(400).json({ message: "Job title is required" });
@@ -103,12 +104,14 @@ export const updateJob = async (req, res) => {
     return res.status(404).json({ message: "Job not found" });
   }
 
-  job.title = title;
+  job.title = escapeHtml(String(title).trim()).substring(0, 200);
   job.location = location;
   job.type = type;
-  job.description = description;
+  job.description = description ? escapeHtml(String(description).trim()).substring(0, 50000) : job.description;
   job.isActive = typeof isActive === "boolean" ? isActive : job.isActive;
-  
+  if ("closingDate" in req.body) {
+    job.closingDate = closingDate ? new Date(closingDate) : null;
+  }
   if ("formSchema" in req.body) {
     job.formSchema = Array.isArray(formSchema) ? formSchema : [];
   }

@@ -23,10 +23,19 @@ export const sendMail = async ({ to, subject, html }) => {
     return;
   }
 
-  await getTransporter().sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to,
-    subject,
-    html,
-  });
+  try {
+    await getTransporter().sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to,
+      subject,
+      html,
+    });
+  } catch (err) {
+    // Reset transporter on connection-level failures so the next call
+    // creates a fresh connection instead of retrying on a broken socket.
+    if (err.code === "ECONNECTION" || err.code === "EAUTH" || err.errno < 0) {
+      transporter = null;
+    }
+    throw err;
+  }
 };
