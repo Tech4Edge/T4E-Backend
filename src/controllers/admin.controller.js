@@ -296,8 +296,6 @@ export const bulkDeleteApplications = async (req, res) => {
 export const updateApplicationStatus = async (req, res) => {
   const { status } = req.body;
 
-  const terminalStatuses = ["Interview", "Hired", "Rejected"];
-  
   if (!APPLICATION_STATUSES.includes(status)) {
     return res.status(400).json({ message: "Invalid status value" });
   }
@@ -313,7 +311,9 @@ export const updateApplicationStatus = async (req, res) => {
   }
   await application.save();
 
-  if (terminalStatuses.includes(status)) {
+  const statusesToEmail = ["Under Review", "Interview", "Offer", "Hired", "Rejected"];
+
+  if (statusesToEmail.includes(status)) {
     const safeCandidateName = escapeHtml(application.candidateName);
     const safeJobTitle = escapeHtml(application.jobId?.title || "Tech4Edges Role");
     
@@ -339,13 +339,31 @@ export const updateApplicationStatus = async (req, res) => {
         <p>Our HR team will reach out shortly with the formal offer details.</p>
         <p>Welcome to Tech4Edges,<br />Tech4Edges Recruitment Team</p>
       `;
+    } else if (status === "Offer") {
+      emailHtml = `
+        <p>Hi ${safeCandidateName},</p>
+        <p>We are excited to move forward and extend an offer for the <strong>${safeJobTitle}</strong> position.</p>
+        <p>Please check your emails for the detailed offer letter and next steps.</p>
+        <p>Best regards,<br />Tech4Edges Recruitment Team</p>
+      `;
+    } else if (status === "Under Review") {
+      emailHtml = `
+        <p>Hi ${safeCandidateName},</p>
+        <p>We wanted to let you know that your application for the <strong>${safeJobTitle}</strong> position is currently under review by our hiring team.</p>
+        <p>We will be in touch as soon as we have an update.</p>
+        <p>Thanks,<br />Tech4Edges Recruitment Team</p>
+      `;
     }
 
-    await sendMail({
-      to: application.candidateEmail,
-      subject: `Application Update - ${safeJobTitle}`,
-      html: emailHtml,
-    });
+    try {
+      await sendMail({
+        to: application.candidateEmail,
+        subject: `Application Update - ${safeJobTitle}`,
+        html: emailHtml,
+      });
+    } catch (error) {
+      console.error("Non-critical error: Failed to send status update email", error);
+    }
   }
 
   return res.json({
