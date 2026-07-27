@@ -26,7 +26,10 @@ export const markAllRead = async (req, res) => {
 
 export const deleteNotification = async (req, res) => {
   try {
-    await Notification.findByIdAndDelete(req.params.id);
+    const deleted = await Notification.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
     return res.json({ message: "Notification deleted" });
   } catch (error) {
     return res.status(500).json({ message: "Failed to delete notification" });

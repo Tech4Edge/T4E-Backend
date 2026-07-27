@@ -5,11 +5,12 @@ import { sendMail } from "../config/mailer.js";
 import { createAdminToken } from "../utils/adminToken.js";
 import { escapeHtml, escapeRegex } from "../utils/sanitize.js";
 import xlsx from "xlsx";
+// Constant-time string comparison: hash both to equal length, then compare.
+// Prevents timing side-channels on both length differences and content.
 const safeCompare = (a, b) => {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return crypto.timingSafeEqual(bufA, bufB);
+  const hashA = crypto.createHash("sha256").update(String(a)).digest();
+  const hashB = crypto.createHash("sha256").update(String(b)).digest();
+  return crypto.timingSafeEqual(hashA, hashB);
 };
 
 const getDateRangeFilter = (rangeStr) => {
@@ -33,7 +34,10 @@ export const loginAdmin = async (req, res) => {
       .json({ message: "ADMIN_USERNAME and ADMIN_PASSWORD must be configured" });
   }
 
-  if (username !== configuredUsername || !safeCompare(password, configuredPassword)) {
+  // Always run BOTH comparisons — never short-circuit — to prevent timing oracle.
+  const usernameMatch = safeCompare(username ?? "", configuredUsername);
+  const passwordMatch = safeCompare(password ?? "", configuredPassword);
+  if (!usernameMatch || !passwordMatch) {
     return res.status(401).json({ message: "Invalid admin credentials" });
   }
 
@@ -143,10 +147,13 @@ export const getApplications = async (req, res) => {
   }
   if (search) {
     const safeSearch = escapeRegex(search);
-    filter.$or = [
-      { candidateName: { $regex: safeSearch, $options: "i" } },
-      { candidateEmail: { $regex: safeSearch, $options: "i" } },
-    ];
+    filter.$and = filter.$and || [];
+    filter.$and.push({
+      $or: [
+        { candidateName: { $regex: safeSearch, $options: "i" } },
+        { candidateEmail: { $regex: safeSearch, $options: "i" } },
+      ]
+    });
   }
 
   const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -192,13 +199,19 @@ export const getAnalytics = async (req, res) => {
     $or: [{ closingDate: null }, { closingDate: { $gt: new Date() } }] 
   });
 
-  // Time-to-Hire
-  const hiredApps = await Application.find({ status: "Hired", hiredAt: { $exists: true }, appliedAt: { $exists: true } });
-  let totalDays = 0;
-  for (const app of hiredApps) {
-    totalDays += (new Date(app.hiredAt) - new Date(app.appliedAt)) / (1000 * 60 * 60 * 24);
-  }
-  const avgTimeToHire = hiredApps.length > 0 ? Math.round(totalDays / hiredApps.length) : 0;
+  // Time-to-Hire — computed via aggregation so no documents are loaded into memory
+  const tthResult = await Application.aggregate([
+    { $match: { status: "Hired", hiredAt: { $exists: true }, appliedAt: { $exists: true } } },
+    {
+      $group: {
+        _id: null,
+        avgMs: { $avg: { $subtract: ["$hiredAt", "$appliedAt"] } }
+      }
+    }
+  ]);
+  const avgTimeToHire = tthResult.length > 0
+    ? Math.round(tthResult[0].avgMs / (1000 * 60 * 60 * 24))
+    : 0;
 
   // Pipeline Status
   const statusCounts = await Application.aggregate([
@@ -253,10 +266,13 @@ export const exportApplicationsCsv = async (req, res) => {
   if (jobId) filter.jobId = jobId;
   if (search) {
     const safeSearch = escapeRegex(search);
-    filter.$or = [
-      { candidateName: { $regex: safeSearch, $options: "i" } },
-      { candidateEmail: { $regex: safeSearch, $options: "i" } },
-    ];
+    filter.$and = filter.$and || [];
+    filter.$and.push({
+      $or: [
+        { candidateName: { $regex: safeSearch, $options: "i" } },
+        { candidateEmail: { $regex: safeSearch, $options: "i" } },
+      ]
+    });
   }
 
   const applications = await Application.find(filter)
@@ -287,9 +303,17 @@ export const bulkDeleteApplications = async (req, res) => {
   if (!ids || !Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ message: "No application IDs provided" });
   }
+  if (ids.length > 100) {
+    return res.status(400).json({ message: "Cannot delete more than 100 applications at once" });
+  }
+  const { Types } = await import("mongoose");
+  const invalidIds = ids.filter(id => !Types.ObjectId.isValid(id));
+  if (invalidIds.length > 0) {
+    return res.status(400).json({ message: `Invalid application IDs: ${invalidIds.join(", ")}` });
+  }
 
-  await Application.deleteMany({ _id: { $in: ids } });
-  return res.json({ message: `Successfully deleted ${ids.length} applications` });
+  const result = await Application.deleteMany({ _id: { $in: ids } });
+  return res.json({ message: `Successfully deleted ${result.deletedCount} applications` });
 };
 
 export const updateApplicationStatus = async (req, res) => {
