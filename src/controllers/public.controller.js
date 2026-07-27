@@ -22,10 +22,13 @@ export const getJobs = async (req, res) => {
   }
   if (search) {
     const safeSearch = escapeRegex(search);
-    filter.$or = [
-      { title: { $regex: safeSearch, $options: "i" } },
-      { description: { $regex: safeSearch, $options: "i" } },
-    ];
+    filter.$and = filter.$and || [];
+    filter.$and.push({
+      $or: [
+        { title: { $regex: safeSearch, $options: "i" } },
+        { description: { $regex: safeSearch, $options: "i" } },
+      ]
+    });
   }
 
   const jobs = await Job.find(filter).sort({ postedDate: -1 });
@@ -183,7 +186,7 @@ export const submitContactForm = async (req, res) => {
   const safeFirstName = escapeHtml(firstName).substring(0, 100);
   const safeLastName = escapeHtml(lastName).substring(0, 100);
   const safeEmail = escapeHtml(email).substring(0, 320);
-  const safePhone = escapeHtml(phone).substring(0, 50);
+  const safePhone = escapeHtml(phone || "").substring(0, 50);
   const safeMessage = escapeHtml(message).substring(0, 2000);
 
   const contactRecipient =

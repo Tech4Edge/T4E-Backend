@@ -1,9 +1,7 @@
 import mongoose from "mongoose";
 
-let isConnected = false;
-
 export const connectDatabase = async () => {
-  if (isConnected) {
+  if (mongoose.connection.readyState === 1) {
     console.log("Using existing database connection");
     return;
   }
@@ -13,10 +11,11 @@ export const connectDatabase = async () => {
   }
 
   try {
-    const db = await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000,
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      bufferCommands: false,
     });
-    isConnected = db.connections[0].readyState === 1;
     console.log("MongoDB connected successfully");
   } catch (error) {
     console.error("MongoDB connection error:", error.message);

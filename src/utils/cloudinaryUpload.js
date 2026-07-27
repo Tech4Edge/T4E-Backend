@@ -1,4 +1,5 @@
 import cloudinary from "../config/cloudinary.js";
+import crypto from "crypto";
 
 export const uploadBufferToCloudinary = (buffer, filename) => {
   return new Promise((resolve, reject) => {
@@ -6,7 +7,7 @@ export const uploadBufferToCloudinary = (buffer, filename) => {
       {
         resource_type: "raw",
         folder: "tech4edges/cvs",
-        public_id: `${Date.now()}-${filename}`,
+        public_id: `${crypto.randomUUID()}-${filename}`,
       },
       (error, result) => {
         if (error) {

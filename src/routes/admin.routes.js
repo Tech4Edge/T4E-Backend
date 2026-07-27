@@ -21,8 +21,8 @@ const router = Router();
 
 router.post("/login", loginRateLimiter, loginAdmin);
 router.post("/logout", logoutAdmin);
-router.get("/me", adminAuth, getAdminMe);
 router.use(adminAuth);
+router.get("/me", getAdminMe);
 router.get("/analytics", getAnalytics);
 router.get("/jobs", getJobsAdmin);
 router.post("/jobs", createJob);

@@ -4,7 +4,7 @@ import Job from "../models/job.model.js";
 import { sendMail } from "../config/mailer.js";
 import { createAdminToken } from "../utils/adminToken.js";
 import { escapeHtml, escapeRegex } from "../utils/sanitize.js";
-
+import xlsx from "xlsx";
 const safeCompare = (a, b) => {
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);
@@ -244,7 +244,6 @@ export const getAnalytics = async (req, res) => {
   });
 };
 
-import xlsx from "xlsx";
 
 export const exportApplicationsCsv = async (req, res) => {
   const { status, jobId, search } = req.query;

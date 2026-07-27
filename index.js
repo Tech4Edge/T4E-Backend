@@ -35,7 +35,9 @@ const parseOrigins = (raw) => {
   if (!raw) return [];
   return raw.split(",").map((s) => s.trim()).filter(Boolean);
 };
-const allowedOrigins = parseOrigins(process.env.FRONTEND_ORIGIN) || ["http://localhost:5173"];
+const allowedOrigins = parseOrigins(process.env.FRONTEND_ORIGIN).length
+  ? parseOrigins(process.env.FRONTEND_ORIGIN)
+  : ["http://localhost:5173", "https://t4e-website.vercel.app"];
 
 app.use(helmet());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
